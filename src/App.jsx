@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 
 const SITE_PASSWORD = "27072005";
@@ -31,6 +31,10 @@ export default function App() {
   const [forgiveStep, setForgiveStep] = useState(0);
   const [showFinalAsk, setShowFinalAsk] = useState(false);
   const [forgiveLevel, setForgiveLevel] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioBlocked, setAudioBlocked] = useState(false);
+
+  const audioRef = useRef(null);
 
   const content = useMemo(
     () => ({
@@ -139,12 +143,34 @@ export default function App() {
   }, [peaceSteps.length]);
 
   useEffect(() => {
-    if (forgiveLevel >= 100) {
-      setShowFinalAsk(true);
-    } else {
-      setShowFinalAsk(false);
-    }
+    setShowFinalAsk(forgiveLevel >= 100);
   }, [forgiveLevel]);
+
+  const startAudio = async () => {
+    if (!audioRef.current) return;
+
+    try {
+      audioRef.current.volume = 1;
+      await audioRef.current.play();
+      setIsPlaying(true);
+      setAudioBlocked(false);
+    } catch {
+      setIsPlaying(false);
+      setAudioBlocked(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!showLoader) {
+      startAudio();
+    }
+  }, [showLoader]);
+
+  useEffect(() => {
+    if (isUnlocked) {
+      startAudio();
+    }
+  }, [isUnlocked]);
 
   const handleUnlock = (e) => {
     e.preventDefault();
@@ -157,9 +183,24 @@ export default function App() {
     }
   };
 
+  const toggleMusic = async () => {
+    if (!audioRef.current) return;
+
+    if (audioRef.current.paused) {
+      await startAudio();
+    } else {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+  };
+
   if (showLoader) {
     return (
       <div className="loader-page" dir="rtl">
+        <audio ref={audioRef} autoPlay loop preload="auto">
+          <source src="/love.mp3" type="audio/mpeg" />
+        </audio>
+
         <div className="loader-hearts">
           <span>🤍</span>
           <span>✨</span>
@@ -174,6 +215,10 @@ export default function App() {
   if (!isUnlocked) {
     return (
       <div className="password-page" dir="rtl">
+        <audio ref={audioRef} autoPlay loop preload="auto">
+          <source src="/love.mp3" type="audio/mpeg" />
+        </audio>
+
         <div className="bg-orb orb-1"></div>
         <div className="bg-orb orb-2"></div>
         <div className="bg-orb orb-3"></div>
@@ -215,6 +260,12 @@ export default function App() {
 
           <div className="hint-box">🎂 تاريخ ميلادك: 27/07/2005</div>
           {error && <div className="error-text">{error}</div>}
+
+          {audioBlocked && (
+            <div className="hint-box" style={{ marginTop: 10 }}>
+              المتصفح منع التشغيل التلقائي. دوس زر تشغيل الأغنية.
+            </div>
+          )}
         </div>
       </div>
     );
@@ -222,6 +273,10 @@ export default function App() {
 
   return (
     <div className="page" dir="rtl">
+      <audio ref={audioRef} autoPlay loop preload="auto">
+        <source src="/love.mp3" type="audio/mpeg" />
+      </audio>
+
       <div className="bg-orb orb-1"></div>
       <div className="bg-orb orb-2"></div>
       <div className="bg-orb orb-3"></div>
@@ -258,11 +313,8 @@ export default function App() {
                 إقرأ كلام ريم
               </button>
 
-              <button
-                className="btn btn-secondary"
-                onClick={() => window.scrollTo({ top: 9999, behavior: "smooth" })}
-              >
-                شوف آخر رسالة
+              <button className="btn btn-secondary" onClick={toggleMusic}>
+                {isPlaying ? "إيقاف الأغنية" : "تشغيل الأغنية"}
               </button>
             </div>
           </div>
@@ -331,8 +383,8 @@ export default function App() {
           <span className="small-badge">🕊️ طريق الصلح</span>
           <h2>أنا محتاجة منك فرصة صلح</h2>
           <p>
-            أنا شلت فكرة العداد وخليت بدلها خطوات صغيرة مني أنا، كأني
-            بقرب لك واحدة واحدة لحد ما أوصل لكلمة الصلح.
+            أنا شلت فكرة العداد وخليت بدلها خطوات صغيرة مني أنا، كأني بقرب
+            لك واحدة واحدة لحد ما أوصل لكلمة الصلح.
           </p>
 
           <div className="forgive-stage-box">
@@ -397,8 +449,8 @@ export default function App() {
               <h3>ينفع تسامحني؟</h3>
               <p>
                 أنا قلتلك كل اللي جوايا بصدق… والباقي عندك. لو ينفع تسامحني،
-                تعالى نبدأ من جديد من غير زعل، وأنا أوعدك إني أحافظ على
-                مكانتك عندي بكل حب وهدوء.
+                تعالى نبدأ من جديد من غير زعل، وأنا أوعدك إني أحافظ على مكانتك
+                عندي بكل حب وهدوء.
               </p>
             </div>
           )}
